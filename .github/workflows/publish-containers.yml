@@ -59,7 +59,7 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY_CACHE_REF }}
           cache-to: type=registry,mode=max,ref=${{ env.REGISTRY_CACHE_REF }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: lotus-${{ matrix.version }}-${{ matrix.net.name }}
+          tags: ghcr.io/filecoin-shipyard/lotus-containers:lotus-${{ matrix.version }}-${{ matrix.net.name }}
           platforms: ${{ matrix.platform }}
           build-args: |
             GOFLAGS=${{ matrix.net.goflags }}
