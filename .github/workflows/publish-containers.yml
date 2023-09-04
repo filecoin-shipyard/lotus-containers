@@ -50,16 +50,24 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata for Lotus ${{ matrix.version }} ${{ matrix.net.name }}
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=lotus-${{ matrix.version }}-${{ matrix.net.name }}
       - name: Build Lotus ${{ matrix.version }} ${{ matrix.net.name }}
         uses: docker/build-push-action@v4
         env:
-          REGISTRY_CACHE_REF: ghcr.io/filecoin-shipyard/lotus-containers:cache
+          REGISTRY_CACHE_REF: ghcr.io/${{ github.repository }}:cache
         with:
           context: lotus
           cache-from: type=registry,ref=${{ env.REGISTRY_CACHE_REF }}
           cache-to: type=registry,mode=max,ref=${{ env.REGISTRY_CACHE_REF }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/filecoin-shipyard/lotus-containers:lotus-${{ matrix.version }}-${{ matrix.net.name }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform }}
           build-args: |
             GOFLAGS=${{ matrix.net.goflags }}
