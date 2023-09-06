@@ -26,8 +26,7 @@ jobs:
           - name: devnet
             goflags: '-tags=debug'
         platform:
-          - linux/amd64
-          - linux/arm64
+          - linux/amd64,linux/arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -37,9 +36,6 @@ jobs:
           path: lotus
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
-        if: ${{ matrix.platform == 'linux/arm64' }}
-        with:
-          platforms: arm64
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
