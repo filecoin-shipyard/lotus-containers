@@ -52,12 +52,11 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=fil-proof-params-${{ matrix.lotus-version }}-${{ matrix.sector-size }}
-      - uses: actions/github-script@v6
-        with:
-          script: |
-            for (lotus-version in matrix.network-version.lotus-versions) {
-              console.log(`fil-proof-params-${lotus-version }-${matrix.sector-size }`)
-            }
+      - name: Generate tags
+        run: |
+          for x in ${{ matrix.network-version.lotus-versions }}; do
+            echo "fil-proof-params-${x}-${{ matrix.sector-size }}"
+          done
       - name: Build image for Lotus ${{ matrix.lotus-version }} Sector Size ${{ matrix.sector-size }}
         uses: docker/build-push-action@v4
         with:
