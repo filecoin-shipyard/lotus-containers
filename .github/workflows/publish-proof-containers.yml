@@ -18,11 +18,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lotus-version:
-          - v1.23.1
-          - v1.23.2
-          - v1.23.3
-          - v1.23.4-rc1
+        network-version:
+          - name: v28
+            lotus-commit: ad39d8707d9c8efa567cd4306140988930f1ef57
+            lotus-versions:
+              - v1.23.1
+              - v1.23.2
+              - v1.23.3
+              - v1.23.4-rc1
         sector-size:
           - '8388608'
         platform:
@@ -49,6 +52,12 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=fil-proof-params-${{ matrix.lotus-version }}-${{ matrix.sector-size }}
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            for (lotus-version in matrix.network-version.lotus-versions) {
+              console.log(`fil-proof-params-${lotus-version }-${matrix.sector-size }`)
+            }
       - name: Build image for Lotus ${{ matrix.lotus-version }} Sector Size ${{ matrix.sector-size }}
         uses: docker/build-push-action@v4
         with:
