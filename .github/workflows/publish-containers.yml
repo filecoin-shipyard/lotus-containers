@@ -17,6 +17,7 @@ jobs:
       packages: write
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         version:
           - v1.23.1
@@ -37,6 +38,8 @@ jobs:
           repository: filecoin-project/lotus
           ref: ${{ matrix.version }}
           path: lotus
+      - name: Clear temporary containerd files
+        run: rm -rf /tmp/containerd-mount*
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
