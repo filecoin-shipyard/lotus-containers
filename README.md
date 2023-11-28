@@ -11,7 +11,14 @@ The pre-built images are available for:
     - `devnet`
 
 - **Lotus Version**:
+    - `v1.23.1`
     - `v1.23.2`
+    - `v1.23.3`
+    - `v1.23.4-rc1`
+    - `v1.23.4-rc2`
+    - `v1.24.0-rc1`
+    - `v1.25.0-rc1`
+    - `v1.25.0`
 
 - **Platforms**:
     - `linux/amd64`
