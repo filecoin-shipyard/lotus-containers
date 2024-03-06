@@ -97,3 +97,4 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             GOFLAGS=${{ matrix.net.goflags }}
+            FFI_BUILD_FROM_SOURCE=0
