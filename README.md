@@ -19,7 +19,6 @@ The pre-built images are available for:
     - `v1.24.0-rc1`
     - `v1.25.0-rc1` 
     - `v1.24.0`
-    - `v1.24.1`
     - `v1.25.0`
     - `v1.25.1`
     - `v1.25.2`
