@@ -23,6 +23,8 @@ The pre-built images are available for:
     - `v1.25.1`
     - `v1.25.2`
     - `v1.26.0-rc1`
+    - `v1.26.0`
+    - `v1.26.1`
 
 - **Platforms**:
     - `linux/amd64`
