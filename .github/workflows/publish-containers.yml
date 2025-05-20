@@ -50,6 +50,7 @@ jobs:
           - v1.32.0-rc3
           - v1.32.1
           - v1.32.2
+          - v1.33.0
         net:
           - name: mainnet
             goflags: ''
