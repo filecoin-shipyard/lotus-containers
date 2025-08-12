@@ -8,36 +8,37 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE: ${{ github.repository }}
-  VERSIONS_JSON: >-
-    ["v1.23.1","v1.23.2","v1.23.3","v1.23.4-rc1","v1.23.4-rc2",
-     "v1.24.0-rc1","v1.25.0-rc1","v1.24.0","v1.25.0","v1.25.1","v1.25.2",
-     "v1.26.0-rc1","v1.26.0","v1.26.1","v1.26.2","v1.26.3",
-     "v1.27.0","v1.27.1","v1.27.2",
-     "v1.28.0","v1.28.1","v1.28.2",
-     "v1.29.0","v1.29.1","v1.29.2",
-     "v1.30.0","v1.31.0",
-     "v1.32.0-rc1","v1.32.0-rc3","v1.32.1","v1.32.2",
-     "v1.33.0","v1.33.1"]
-  NETS_JSON: >-
-    [{"name":"mainnet","goflags":""},
-     {"name":"devnet","goflags":"-tags=debug"}]
-  ARCHES_JSON: >-
-    [{"arch":"amd64","platform":"linux/amd64","runs_on":"ubuntu-latest"},
-     {"arch":"arm64","platform":"linux/arm64","runs_on":"ubuntu-24.04-arm"}]  # adjust to your native ARM runner
 
 jobs:
+  # 1) Define matrices once and expose as outputs.
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.out.outputs.versions }}
+      nets:     ${{ steps.out.outputs.nets }}
+      arches:   ${{ steps.out.outputs.arches }}
+    steps:
+      - id: out
+        run: |
+          echo 'versions=["v1.23.1","v1.23.2","v1.23.3","v1.23.4-rc1","v1.23.4-rc2","v1.24.0-rc1","v1.25.0-rc1","v1.24.0","v1.25.0","v1.25.1","v1.25.2","v1.26.0-rc1","v1.26.0","v1.26.1","v1.26.2","v1.26.3","v1.27.0","v1.27.1","v1.27.2","v1.28.0","v1.28.1","v1.28.2","v1.29.0","v1.29.1","v1.29.2","v1.30.0","v1.31.0","v1.32.0-rc1","v1.32.0-rc3","v1.32.1","v1.32.2","v1.33.0","v1.33.1"]' >> "$GITHUB_OUTPUT"
+          echo 'nets=[{"name":"mainnet","goflags":""},{"name":"devnet","goflags":"-tags=debug"}]' >> "$GITHUB_OUTPUT"
+          # NOTE: Use a native ARM runner label you actually have. If you use self-hosted ARM, replace runs_on accordingly.
+          echo 'arches=[{"arch":"amd64","platform":"linux/amd64","runs_on":"ubuntu-latest"},{"arch":"arm64","platform":"linux/arm64","runs_on":"ubuntu-24.04-arm"}]' >> "$GITHUB_OUTPUT"
+
+  # 2) Build native per-arch, skipping if that arch tag already exists.
   build:
     name: Build ${{ matrix.version }} • ${{ matrix.net.name }} • ${{ matrix.arch.arch }}
-    runs-on: ${{ matrix.arch.runs_on }}
+    needs: setup-matrix
+    runs-on: ${{ matrix.arch.runs_on }}   # ensures no QEMU
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
       matrix:
-        version: ${{ fromJSON(env.VERSIONS_JSON) }}
-        net: ${{ fromJSON(env.NETS_JSON) }}
-        arch: ${{ fromJSON(env.ARCHES_JSON) }}
+        version: ${{ fromJSON(needs.setup-matrix.outputs.versions) }}
+        net:     ${{ fromJSON(needs.setup-matrix.outputs.nets) }}
+        arch:    ${{ fromJSON(needs.setup-matrix.outputs.arches) }}
     steps:
       - uses: docker/login-action@v2
         with:
@@ -50,9 +51,9 @@ jobs:
         run: |
           TAG="${{ env.REGISTRY }}/${{ env.IMAGE }}:lotus-${{ matrix.version }}-${{ matrix.net.name }}-${{ matrix.arch.arch }}"
           if docker manifest inspect "$TAG" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v3
@@ -76,19 +77,20 @@ jobs:
           build-args: |
             GOFLAGS=${{ matrix.net.goflags }}
 
+  # 3) Create the multi-arch manifest per (version, net), skipping if already present.
   manifest:
     name: Manifest ${{ matrix.version }} • ${{ matrix.net.name }}
     if: github.event_name != 'pull_request'
+    needs: [ setup-matrix, build ]
     runs-on: ubuntu-latest
-    needs: build
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
       matrix:
-        version: ${{ fromJSON(env.VERSIONS_JSON) }}
-        net: ${{ fromJSON(env.NETS_JSON) }}
+        version: ${{ fromJSON(needs.setup-matrix.outputs.versions) }}
+        net:     ${{ fromJSON(needs.setup-matrix.outputs.nets) }}
     steps:
       - uses: docker/login-action@v2
         with:
@@ -96,7 +98,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: docker/setup-buildx-action@v2
+
+      - name: Skip if final manifest exists
+        id: already
+        run: |
+          TAG="${{ env.REGISTRY }}/${{ env.IMAGE }}:lotus-${{ matrix.version }}-${{ matrix.net.name }}"
+          if docker manifest inspect "$TAG" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create/Update multi-arch manifest
+        if: steps.already.outputs.skip != 'true'
         shell: bash
         env:
           BASE_TAG: ${{ env.REGISTRY }}/${{ env.IMAGE }}:lotus-${{ matrix.version }}-${{ matrix.net.name }}
